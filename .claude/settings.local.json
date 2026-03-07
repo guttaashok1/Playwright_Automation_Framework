@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(pip show playwright pytest-playwright)",
+      "Bash(pip install playwright faker --quiet)",
+      "Bash(playwright install chromium)",
+      "Bash(pip3 install playwright faker --quiet)",
+      "Bash(python3 -m playwright install chromium)",
+      "Bash(python3.12 -m pip show playwright faker)",
+      "Bash(python3.12 -m pip install playwright faker --quiet)",
+      "Bash(python3.12 -m pip install playwright faker --break-system-packages --quiet)",
+      "Bash(python3.12 -m playwright install chromium)",
+      "Bash(python3.12 -m playwright --version)",
+      "Bash(python3.12 -c \"from faker import Faker; print\\(''faker ok''\\)\")",
+      "Bash(python3.12 tests/ui/test_practice_registration.py)",
+      "Bash(python3.12 -:*)",
+      "Bash(python3.12 -m pip install pytest pytest-playwright pytest-html allure-pytest --break-system-packages --quiet)",
+      "Bash(python3.12 -m pytest tests/ui/test_practice_registration.py --browser=chromium --headed --screenshot=on --video=on --output=reports/artifacts --html=reports/report.html --self-contained-html --alluredir=reports/allure-results -v)",
+      "Bash(python3.12 -m pytest tests/ui/test_practice_registration.py --browser=chromium --screenshot=on --video=on --output=reports/artifacts --html=reports/report.html --self-contained-html --alluredir=reports/allure-results --override-ini=\"addopts=\" -v)",
+      "Bash(python3.12 -m pip install loguru python-dotenv tenacity --break-system-packages --quiet)",
+      "Bash(python3.12 -m pip install httpx requests pydantic python-dotenv loguru tenacity faker --break-system-packages --quiet)",
+      "Bash(open /Users/ashokkumargutta/Desktop/Ashok/Projects/claude_code/playwright_automation/reports/report.html)"
+    ]
+  }
+}

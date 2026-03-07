@@ -1,0 +1,83 @@
+################################################################################
+# infra/aws/jenkins/docker-compose.yml
+#
+# ⚠️  FREE TIER OPTIMISED for t2.micro (1 vCPU / 1 GB RAM)
+#   • JVM heap: -Xmx512m  (vs 2g on bigger instances)
+#   • Container mem_limit: 700m
+#   • Docker-in-Docker REMOVED (too heavy — saves ~200 MB RAM)
+#   • numExecutors: 1  (set in JCasC)
+#   • Host must have a 2 GB swap file (added by user_data.sh)
+#
+# Upgrade path: when free tier expires, switch to t3.medium and:
+#   1. Remove mem_limit / memswap_limit
+#   2. Change -Xmx512m → -Xmx2g
+#   3. Re-enable the dind service below
+#   4. Change numExecutors: 1 → 2 in JCasC
+################################################################################
+version: "3.9"
+
+services:
+
+  # ── Jenkins Controller ───────────────────────────────────────────────────────
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins
+    restart: unless-stopped
+    ports:
+      - "8080:8080"       # Web UI
+      - "50000:50000"     # Agent JNLP
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock   # Docker-from-Docker (light)
+      - ./casc:/var/jenkins_home/casc_configs:ro    # JCasC
+    environment:
+      CASC_JENKINS_CONFIG: /var/jenkins_home/casc_configs
+      # ── FREE TIER JVM settings ───────────────────────────────────────────────
+      JAVA_OPTS: >-
+        -Djenkins.install.runSetupWizard=false
+        -Dhudson.model.DirectoryBrowserSupport.CSP=
+        -Xms256m
+        -Xmx512m
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -Djava.awt.headless=true
+      JENKINS_OPTS: "--prefix=/"
+    # ── Container hard memory limits (prevents host OOM on 1 GB RAM) ──────────
+    mem_limit: 700m
+    memswap_limit: 1400m   # 700m RAM + 700m swap
+    user: root   # Needed for Docker socket access
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]
+      interval: 45s
+      timeout: 15s
+      retries: 10
+      start_period: 180s   # t2.micro is slow on cold start
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ── Docker-in-Docker — DISABLED on free tier (uncomment after upgrade) ───────
+  # dind:
+  #   image: docker:dind
+  #   container_name: jenkins-dind
+  #   restart: unless-stopped
+  #   privileged: true
+  #   environment:
+  #     DOCKER_TLS_CERTDIR: ""
+  #   volumes:
+  #     - dind_storage:/var/lib/docker
+  #   expose:
+  #     - "2375"
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "20m"
+  #       max-file: "3"
+
+volumes:
+  jenkins_home:
+    driver: local
+  # dind_storage:
+  #   driver: local

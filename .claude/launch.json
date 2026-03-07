@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Basketball Game",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "3333"],
+      "port": 3333
+    },
+    {
+      "name": "HTML Report Server",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["serve_reports.py"],
+      "port": 8080,
+      "autoPort": true
+    },
+    {
+      "name": "Allure Report Server",
+      "runtimeExecutable": "allure",
+      "runtimeArgs": ["serve", "reports/allure-results", "-p", "5252"],
+      "port": 5252
+    }
+  ]
+}

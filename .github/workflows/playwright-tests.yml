@@ -1,0 +1,224 @@
+name: Playwright Automation Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run full regression nightly at 02:00 UTC
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: "Test suite to run"
+        required: false
+        default: "smoke"
+        type: choice
+        options:
+          - smoke
+          - regression
+          - ui
+          - api
+          - all
+      environment:
+        description: "Target environment"
+        required: false
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - dev
+          - prod
+
+env:
+  PYTHON_VERSION: "3.12"
+  # Secrets are stored in GitHub → Settings → Secrets and Variables
+  BASE_URL: ${{ secrets.BASE_URL }}
+  API_BASE_URL: ${{ secrets.API_BASE_URL }}
+  TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+  TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+  ADO_ORG_URL: ${{ secrets.ADO_ORG_URL }}
+  ADO_PROJECT: ${{ secrets.ADO_PROJECT }}
+  ADO_PAT: ${{ secrets.ADO_PAT }}
+  CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+  CONFLUENCE_USERNAME: ${{ secrets.CONFLUENCE_USERNAME }}
+  CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'staging' }}
+
+jobs:
+  # ── Job 1: Lint & Static Analysis ─────────────────────────
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install lint dependencies
+        run: pip install ruff mypy
+
+      - name: Run ruff linter
+        run: ruff check . --select=E,W,F --ignore=E501
+
+  # ── Job 2: API Tests ───────────────────────────────────────
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run API tests
+        run: |
+          pytest tests/api/ \
+            -m "api" \
+            --html=reports/api-report.html \
+            --self-contained-html \
+            -v
+
+      - name: Upload API test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-report
+          path: reports/api-report.html
+          retention-days: 30
+
+  # ── Job 3: UI Tests (Matrix: chromium, firefox, webkit) ──
+  ui-tests:
+    name: UI Tests (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run UI tests
+        run: |
+          SUITE="${{ github.event.inputs.test_suite || 'smoke' }}"
+          if [ "$SUITE" = "all" ]; then MARKER="ui"; else MARKER="$SUITE and ui"; fi
+          pytest tests/ui/ \
+            -m "$MARKER" \
+            --browser=${{ matrix.browser }} \
+            --headed=false \
+            --screenshot=only-on-failure \
+            --video=retain-on-failure \
+            --tracing=retain-on-failure \
+            --output=reports/artifacts/${{ matrix.browser }} \
+            --html=reports/ui-report-${{ matrix.browser }}.html \
+            --self-contained-html \
+            -v
+        env:
+          BROWSER: ${{ matrix.browser }}
+
+      - name: Upload UI test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-report-${{ matrix.browser }}
+          path: |
+            reports/ui-report-${{ matrix.browser }}.html
+            reports/artifacts/${{ matrix.browser }}/
+          retention-days: 30
+
+  # ── Job 4: Publish Results ─────────────────────────────────
+  publish-results:
+    name: Publish Results to ADO & Confluence
+    runs-on: ubuntu-latest
+    needs: [api-tests, ui-tests]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download all test reports
+        uses: actions/download-artifact@v4
+        with:
+          path: reports/
+
+      - name: Publish results to ADO & Confluence
+        run: |
+          python -c "
+          import os
+          from utils.reporter import TestReporter, TestResult
+          from utils.ado_client import ADOClient
+          from utils.confluence_client import ConfluenceClient
+
+          reporter = TestReporter()
+          sprint = os.getenv('SPRINT_NAME', 'CI Run')
+          reporter.publish(
+              suite_name=f'CI - {sprint} - Build #{os.getenv(\"GITHUB_RUN_NUMBER\", \"local\")}',
+              sprint_name=sprint,
+              slack_notify=True,
+          )
+          "
+        env:
+          SPRINT_NAME: ${{ github.event.inputs.sprint_name || 'CI Run' }}
+
+  # ── Job 5: PR Status Check ─────────────────────────────────
+  pr-status:
+    name: PR Status Summary
+    runs-on: ubuntu-latest
+    needs: [api-tests, ui-tests]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Post test summary to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const apiStatus = '${{ needs.api-tests.result }}';
+            const uiStatus = '${{ needs.ui-tests.result }}';
+            const emoji = (s) => s === 'success' ? '✅' : '❌';
+            const body = `## Test Results\n
+            | Suite | Status |
+            |-------|--------|
+            | API Tests | ${emoji(apiStatus)} ${apiStatus} |
+            | UI Tests  | ${emoji(uiStatus)} ${uiStatus} |
+
+            [View full reports in Actions artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body,
+            });

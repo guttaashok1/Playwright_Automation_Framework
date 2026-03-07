@@ -1,0 +1,24 @@
+# Slack / MS Teams Notification Template
+# Used by publishResults.groovy and utils/reporter.py
+#
+# Variables substituted at runtime:
+#   {suite_name}   - Test suite / build label
+#   {environment}  - staging | dev | prod
+#   {total}        - Total test count
+#   {passed}       - Passed count
+#   {failed}       - Failed count
+#   {skipped}      - Skipped count
+#   {pass_rate}    - Pass percentage (e.g. 95.3)
+#   {build_url}    - Jenkins build URL (CI only)
+#   {status_icon}  - ✅ or ❌
+#   {failed_tests} - Newline-separated list of failed test names
+
+# ── Slack (mrkdwn) ─────────────────────────────────────────────────────────────
+SLACK_SUCCESS="{status_icon} *{suite_name}* — {environment}\n> Passed: {passed} | Failed: {failed} | Skipped: {skipped} | Pass Rate: {pass_rate}%"
+SLACK_FAILURE="{status_icon} *{suite_name}* — {environment}\n> Passed: {passed} | Failed: {failed} | Skipped: {skipped} | Pass Rate: {pass_rate}%\n*Failed Tests:*\n{failed_tests}"
+
+# ── MS Teams (MessageCard) ─────────────────────────────────────────────────────
+TEAMS_TITLE="{status_icon} {suite_name}"
+TEAMS_SUBTITLE="Environment: {environment} | Build: {build_url}"
+TEAMS_THEME_SUCCESS=00875A
+TEAMS_THEME_FAILURE=DE350B
