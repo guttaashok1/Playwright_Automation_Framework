@@ -28,7 +28,7 @@ from typing import Optional
 from loguru import logger
 
 try:
-    from PIL import Image, ImageChops, ImageDraw, ImageFilter
+    from PIL import Image, ImageChops, ImageDraw
     _PIL_AVAILABLE = True
 except ImportError:
     _PIL_AVAILABLE = False

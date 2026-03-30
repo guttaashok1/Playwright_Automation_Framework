@@ -15,7 +15,6 @@ from test_data.practice_test_data import (
     CUSTOMER_PASSWORD,
     BASE_URL,
     make_billing,
-    make_user,
 )
 
 

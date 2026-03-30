@@ -13,7 +13,7 @@ from typing import Generator
 
 import pytest
 from loguru import logger
-from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_playwright
+from playwright.sync_api import Browser, BrowserContext, Page
 
 try:
     from pytest_html import extras as html_extras
@@ -23,7 +23,7 @@ except ImportError:
 
 from configs.config import config
 from utils.api_client import APIClient
-from utils.ado_client import ADOClient, TestOutcome
+from utils.ado_client import ADOClient
 from utils.confluence_client import ConfluenceClient
 
 

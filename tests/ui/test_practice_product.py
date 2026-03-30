@@ -8,7 +8,7 @@ from playwright.sync_api import Page
 from pages.practice_home_page import PracticeHomePage
 from pages.practice_product_page import PracticeProductPage
 from pages.practice_cart_page import PracticeCartPage
-from test_data.practice_test_data import PRODUCT_SEARCH_QUERY, PRODUCT_NAME_PLIERS
+from test_data.practice_test_data import PRODUCT_SEARCH_QUERY
 
 
 @pytest.mark.ui

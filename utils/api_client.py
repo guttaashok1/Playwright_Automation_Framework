@@ -64,7 +64,7 @@ class APIResponse:
 
     def get_json_value(self, key: str) -> Any:
         body = self.body
-        assert isinstance(body, dict), f"Response body is not a JSON object"
+        assert isinstance(body, dict), "Response body is not a JSON object"
         return body[key]
 
 

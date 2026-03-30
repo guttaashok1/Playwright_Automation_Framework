@@ -12,8 +12,6 @@ import pytest
 from utils.api_client import APIClient
 from test_data.practice_test_data import (
     API_BASE_URL,
-    CUSTOMER_EMAIL,
-    CUSTOMER_PASSWORD,
     PRODUCT_SEARCH_QUERY,
     login_payload,
 )
@@ -100,7 +98,8 @@ class TestPracticeProductsPaginationAPI:
         """Page 2 products differ from page 1 products."""
         r1 = practice_client.get("/products", params={"page": 1, "per_page": 5})
         r2 = practice_client.get("/products", params={"page": 2, "per_page": 5})
-        b1 = r1.body; b2 = r2.body
+        b1 = r1.body
+        b2 = r2.body
         ids1 = {p["id"] for p in (b1["data"] if isinstance(b1, dict) else b1)}
         ids2 = {p["id"] for p in (b2["data"] if isinstance(b2, dict) else b2)}
         assert ids1 != ids2, "Page 1 and page 2 return identical products"

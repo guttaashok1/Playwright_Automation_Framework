@@ -10,7 +10,7 @@ Steps:
 from __future__ import annotations
 
 from loguru import logger
-from playwright.sync_api import Page, expect
+from playwright.sync_api import expect
 
 from pages.base_page import BasePage
 

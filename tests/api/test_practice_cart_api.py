@@ -14,8 +14,6 @@ import pytest
 from utils.api_client import APIClient
 from test_data.practice_test_data import (
     API_BASE_URL,
-    CUSTOMER_EMAIL,
-    CUSTOMER_PASSWORD,
     login_payload,
 )
 
