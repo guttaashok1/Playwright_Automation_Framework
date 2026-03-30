@@ -1,6 +1,5 @@
 """Serve the reports/ directory on the port assigned via PORT env var."""
 import os
-import sys
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 port = int(os.environ.get("PORT", 8080))

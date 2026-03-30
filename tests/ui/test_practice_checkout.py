@@ -82,8 +82,8 @@ class TestPracticeCheckoutAuthenticated:
         checkout.fill_billing(**make_billing())
         checkout.proceed_from_billing()
         # Payment method selector or confirm button should be visible
-        assert checkout.is_visible(checkout._CONFIRM_ORDER_BTN) or \
-               checkout.is_visible(checkout._PAYMENT_METHOD), \
+        assert checkout._confirm_order_btn().is_visible() or \
+               checkout._payment_method().is_visible(), \
                "Neither payment method nor confirm button is visible"
 
     @pytest.mark.slow
@@ -113,7 +113,7 @@ class TestPracticeCheckoutAuthenticated:
 
         # Checkout
         checkout = PracticeCheckoutPage(page)
-        if checkout.is_visible(checkout._LOGIN_EMAIL):
+        if checkout._login_email().is_visible():
             checkout.login_at_checkout(CUSTOMER_EMAIL, CUSTOMER_PASSWORD)
 
         checkout.fill_billing(**make_billing())
@@ -139,6 +139,6 @@ class TestPracticeCheckoutValidation:
         if not cart.is_empty():
             cart.clear_cart()
         # Proceed button should not be visible for empty cart
-        assert not cart.is_visible(cart._PROCEED_TO_CHECKOUT), (
+        assert not cart._proceed_to_checkout_btn().is_visible(), (
             "Proceed button is visible for an empty cart"
         )

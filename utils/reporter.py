@@ -10,10 +10,8 @@ Aggregates test results and publishes them to:
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 import requests

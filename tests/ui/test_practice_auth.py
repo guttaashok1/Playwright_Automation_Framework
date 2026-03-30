@@ -35,9 +35,10 @@ class TestPracticeLogin:
 
     def test_register_link_visible_on_login_page(self, page: Page):
         """'Register your account' link is visible from the login page."""
+        from playwright.sync_api import expect
         login = PracticeLoginPage(page)
         login.open()
-        login.assert_visible("[data-test='register-link']")
+        expect(login._register_link()).to_be_visible()
 
 
 @pytest.mark.ui
@@ -65,7 +66,7 @@ class TestPracticeLoginValidation:
         """Submitting an empty login form stays on the login page."""
         login = PracticeLoginPage(page)
         login.open()
-        login.click(login._LOGIN_BUTTON)
+        login.click_login()
         login.assert_still_on_login()
 
     def test_empty_password_shows_error(self, page: Page):
@@ -73,7 +74,7 @@ class TestPracticeLoginValidation:
         login = PracticeLoginPage(page)
         login.open()
         login.enter_email(CUSTOMER_EMAIL)
-        login.click(login._LOGIN_BUTTON)
+        login.click_login()
         login.assert_still_on_login()
 
     @pytest.mark.parametrize("email,password,label", [
@@ -88,7 +89,7 @@ class TestPracticeLoginValidation:
         login.open()
         login.enter_email(email)
         login.enter_password(password)
-        login.click(login._LOGIN_BUTTON)
+        login.click_login()
         login.assert_still_on_login()
 
 

@@ -6,6 +6,9 @@ Steps:
   3. Billing info  (/checkout step 3)
   4. Payment       (/checkout step 4)
   5. Confirmation  (/checkout/confirmation)
+
+Locator priority: get_by_role → get_by_label → get_by_placeholder
+                  → get_by_text → get_by_test_id → locator
 """
 from __future__ import annotations
 
@@ -20,42 +23,192 @@ class PracticeCheckoutPage(BasePage):
 
     BASE = "https://practicesoftwaretesting.com"
 
-    # ── Step 1 — Cart ─────────────────────────────────────────────────────────
-    _PROCEED_STEP1       = "[data-test='proceed-1']"
+    # ── Locators: Step 1 — Cart ───────────────────────────────────────────────
 
-    # ── Step 2 — Sign In ──────────────────────────────────────────────────────
-    _PROCEED_STEP2       = "[data-test='proceed-2']"
-    _LOGIN_EMAIL         = "[data-test='email']"
-    _LOGIN_PASSWORD      = "[data-test='password']"
-    _LOGIN_SUBMIT        = "[data-test='login-submit']"
+    def _proceed_step1(self):
+        # get_by_role button → get_by_test_id
+        loc = self.page.get_by_role("button", name="Proceed to checkout")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_role("link", name="Proceed to checkout")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("proceed-1")
 
-    # ── Step 3 — Billing ─────────────────────────────────────────────────────
-    _BILLING_FIRST_NAME  = "[data-test='first-name']"
-    _BILLING_LAST_NAME   = "[data-test='last-name']"
-    _BILLING_ADDRESS     = "[data-test='address']"
-    _BILLING_CITY        = "[data-test='city']"
-    _BILLING_STATE       = "[data-test='state']"
-    _BILLING_POSTCODE    = "[data-test='postcode']"
-    _BILLING_COUNTRY     = "[data-test='country']"
-    _BILLING_PHONE       = "[data-test='phone']"
-    _BILLING_EMAIL       = "[data-test='email']"
-    _PROCEED_STEP3       = "[data-test='proceed-3']"
+    # ── Locators: Step 2 — Sign In ────────────────────────────────────────────
 
-    # ── Step 4 — Payment ─────────────────────────────────────────────────────
-    _PAYMENT_METHOD      = "[data-test='payment-method']"
-    _PAYMENT_BANK_NAME   = "[data-test='bank-name']"
-    _PAYMENT_ACCOUNT_NUM = "[data-test='account-number']"
-    _PAYMENT_ACCOUNT_NAME= "[data-test='account-name']"
-    _CONFIRM_ORDER_BTN   = "[data-test='finish']"
+    def _login_email(self):
+        # get_by_label → get_by_placeholder → get_by_test_id
+        loc = self.page.get_by_label("Email")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("Your email")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("email")
 
-    # ── Confirmation ─────────────────────────────────────────────────────────
-    _ORDER_CONFIRMATION  = "[data-test='order-confirmation']"
-    _ORDER_NUMBER        = "[data-test='order-number']"
-    _INVOICE_NUMBER      = ".alert-success"
+    def _login_password(self):
+        # get_by_label → get_by_placeholder → get_by_test_id
+        loc = self.page.get_by_label("Password")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("Your password")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("password")
 
-    # ── Generic ───────────────────────────────────────────────────────────────
-    _STEP_INDICATOR      = ".step-indicator, .checkout-steps"
-    _ERROR_TOAST         = ".toast-body"
+    def _login_submit(self):
+        # get_by_role button
+        loc = self.page.get_by_role("button", name="Login")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("login-submit")
+
+    def _proceed_step2(self):
+        # get_by_role → get_by_test_id
+        loc = self.page.get_by_role("button", name="Proceed")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("proceed-2")
+
+    # ── Locators: Step 3 — Billing ────────────────────────────────────────────
+
+    def _billing_first_name(self):
+        # get_by_label → get_by_placeholder → get_by_test_id
+        loc = self.page.get_by_label("First name")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("First name")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("first-name")
+
+    def _billing_last_name(self):
+        loc = self.page.get_by_label("Last name")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("Last name")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("last-name")
+
+    def _billing_address(self):
+        loc = self.page.get_by_label("Address")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("Address")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("address")
+
+    def _billing_city(self):
+        loc = self.page.get_by_label("City")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("City")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("city")
+
+    def _billing_state(self):
+        loc = self.page.get_by_label("State")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("State")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("state")
+
+    def _billing_postcode(self):
+        loc = self.page.get_by_label("Postcode")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("Postcode")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("postcode")
+
+    def _billing_country(self):
+        # get_by_label → get_by_test_id
+        loc = self.page.get_by_label("Country")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("country")
+
+    def _billing_phone(self):
+        loc = self.page.get_by_label("Phone")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("Phone")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("phone")
+
+    def _billing_email(self):
+        loc = self.page.get_by_label("Email")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_placeholder("Email")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("email")
+
+    def _proceed_step3(self):
+        loc = self.page.get_by_role("button", name="Proceed")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("proceed-3")
+
+    # ── Locators: Step 4 — Payment ────────────────────────────────────────────
+
+    def _payment_method(self):
+        # get_by_label → get_by_test_id
+        loc = self.page.get_by_label("Payment Method")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("payment-method")
+
+    def _payment_bank_name(self):
+        loc = self.page.get_by_label("Bank Name")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("bank-name")
+
+    def _payment_account_number(self):
+        loc = self.page.get_by_label("Account Number")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("account-number")
+
+    def _payment_account_name(self):
+        loc = self.page.get_by_label("Account Name")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("account-name")
+
+    def _confirm_order_btn(self):
+        # get_by_role button → get_by_test_id
+        loc = self.page.get_by_role("button", name="Confirm")
+        if loc.count() > 0:
+            return loc
+        loc = self.page.get_by_role("button", name="Place Order")
+        if loc.count() > 0:
+            return loc
+        return self.page.get_by_test_id("finish")
+
+    # ── Locators: Confirmation ────────────────────────────────────────────────
+
+    def _order_confirmation(self):
+        loc = self.page.get_by_test_id("order-confirmation")
+        if loc.count() > 0:
+            return loc
+        return self.page.locator(".alert-success")
+
+    def _order_number(self):
+        loc = self.page.get_by_test_id("order-number")
+        if loc.count() > 0:
+            return loc
+        return self.page.locator(".alert-success")
 
     # ── Step 1: Cart → Proceed ────────────────────────────────────────────────
 
@@ -66,7 +219,7 @@ class PracticeCheckoutPage(BasePage):
 
     def proceed_from_cart(self) -> "PracticeCheckoutPage":
         logger.info("[Checkout] Step 1 → Proceed from cart")
-        self.click(self._PROCEED_STEP1)
+        self._proceed_step1().click()
         self.wait_for_network_idle()
         return self
 
@@ -74,17 +227,17 @@ class PracticeCheckoutPage(BasePage):
 
     def login_at_checkout(self, email: str, password: str) -> "PracticeCheckoutPage":
         logger.info(f"[Checkout] Step 2 → Logging in as {email}")
-        if self.is_visible(self._LOGIN_EMAIL):
-            self.fill(self._LOGIN_EMAIL, email)
-            self.fill(self._LOGIN_PASSWORD, password)
-            self.click(self._LOGIN_SUBMIT)
+        if self._login_email().is_visible():
+            self._login_email().fill(email)
+            self._login_password().fill(password)
+            self._login_submit().click()
             self.wait_for_network_idle()
         else:
             logger.info("[Checkout] Already authenticated, skipping login step")
         return self
 
     def proceed_as_guest(self) -> "PracticeCheckoutPage":
-        self.click(self._PROCEED_STEP2)
+        self._proceed_step2().click()
         self.wait_for_network_idle()
         return self
 
@@ -103,26 +256,29 @@ class PracticeCheckoutPage(BasePage):
         email: str = "test@example.com",
     ) -> "PracticeCheckoutPage":
         logger.info("[Checkout] Step 3 → Filling billing details")
-        fields = {
-            self._BILLING_FIRST_NAME: first_name,
-            self._BILLING_LAST_NAME:  last_name,
-            self._BILLING_ADDRESS:    address,
-            self._BILLING_CITY:       city,
-            self._BILLING_STATE:      state,
-            self._BILLING_POSTCODE:   postcode,
-            self._BILLING_PHONE:      phone,
-            self._BILLING_EMAIL:      email,
-        }
-        for selector, value in fields.items():
-            if self.is_visible(selector):
-                self.fill(selector, value)
+        fields = [
+            (self._billing_first_name, first_name),
+            (self._billing_last_name, last_name),
+            (self._billing_address, address),
+            (self._billing_city, city),
+            (self._billing_state, state),
+            (self._billing_postcode, postcode),
+            (self._billing_phone, phone),
+            (self._billing_email, email),
+        ]
+        for locator_fn, value in fields:
+            loc = locator_fn()
+            if loc.is_visible():
+                loc.clear()
+                loc.fill(value)
 
-        if self.is_visible(self._BILLING_COUNTRY):
-            self.select_option(self._BILLING_COUNTRY, country)
+        country_loc = self._billing_country()
+        if country_loc.is_visible():
+            country_loc.select_option(country)
         return self
 
     def proceed_from_billing(self) -> "PracticeCheckoutPage":
-        self.click(self._PROCEED_STEP3)
+        self._proceed_step3().click()
         self.wait_for_network_idle()
         return self
 
@@ -130,8 +286,9 @@ class PracticeCheckoutPage(BasePage):
 
     def select_payment_method(self, method: str = "Bank Transfer") -> "PracticeCheckoutPage":
         logger.info(f"[Checkout] Step 4 → Selecting payment: {method}")
-        if self.is_visible(self._PAYMENT_METHOD):
-            self.select_option(self._PAYMENT_METHOD, method)
+        loc = self._payment_method()
+        if loc.is_visible():
+            loc.select_option(method)
         return self
 
     def fill_bank_transfer(
@@ -140,17 +297,20 @@ class PracticeCheckoutPage(BasePage):
         account_number: str = "1234567890",
         account_name: str = "John Doe",
     ) -> "PracticeCheckoutPage":
-        if self.is_visible(self._PAYMENT_BANK_NAME):
-            self.fill(self._PAYMENT_BANK_NAME, bank_name)
-        if self.is_visible(self._PAYMENT_ACCOUNT_NUM):
-            self.fill(self._PAYMENT_ACCOUNT_NUM, account_number)
-        if self.is_visible(self._PAYMENT_ACCOUNT_NAME):
-            self.fill(self._PAYMENT_ACCOUNT_NAME, account_name)
+        bank_loc = self._payment_bank_name()
+        if bank_loc.is_visible():
+            bank_loc.fill(bank_name)
+        acc_num_loc = self._payment_account_number()
+        if acc_num_loc.is_visible():
+            acc_num_loc.fill(account_number)
+        acc_name_loc = self._payment_account_name()
+        if acc_name_loc.is_visible():
+            acc_name_loc.fill(account_name)
         return self
 
     def confirm_order(self) -> "PracticeCheckoutPage":
         logger.info("[Checkout] Confirming order")
-        self.click(self._CONFIRM_ORDER_BTN)
+        self._confirm_order_btn().click()
         self.wait_for_network_idle(timeout=30_000)
         return self
 
@@ -179,10 +339,12 @@ class PracticeCheckoutPage(BasePage):
     # ── Confirmation ─────────────────────────────────────────────────────────
 
     def get_order_number(self) -> str:
-        if self.is_visible(self._ORDER_NUMBER):
-            return self.get_text(self._ORDER_NUMBER)
-        if self.is_visible(self._INVOICE_NUMBER):
-            return self.get_text(self._INVOICE_NUMBER)
+        order_num = self.page.get_by_test_id("order-number")
+        if order_num.is_visible():
+            return order_num.inner_text()
+        invoice = self.page.locator(".alert-success")
+        if invoice.is_visible():
+            return invoice.inner_text()
         return ""
 
     # ── Assertions ────────────────────────────────────────────────────────────
@@ -193,8 +355,8 @@ class PracticeCheckoutPage(BasePage):
     def assert_order_confirmed(self) -> None:
         """Assert the order confirmation message is visible."""
         expect(
-            self.page.locator(self._ORDER_CONFIRMATION).or_(
-                self.page.locator(self._INVOICE_NUMBER)
+            self._order_confirmation().or_(
+                self.page.locator(".alert-success")
             )
         ).to_be_visible(timeout=15_000)
 

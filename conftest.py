@@ -28,6 +28,20 @@ from utils.confluence_client import ConfluenceClient
 
 
 # ============================================================
+# Playwright test-id attribute configuration
+# ============================================================
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_test_id_attribute(playwright) -> None:
+    """
+    Configure Playwright to use 'data-test' as the test ID attribute.
+    practicesoftwaretesting.com uses data-test (not data-testid),
+    so page.get_by_test_id() must target the correct attribute.
+    """
+    playwright.selectors.set_test_id_attribute("data-test")
+
+
+# ============================================================
 # Custom CLI options
 # ============================================================
 
