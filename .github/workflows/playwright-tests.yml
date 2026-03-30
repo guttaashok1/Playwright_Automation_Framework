@@ -131,7 +131,6 @@ jobs:
           pytest tests/ui/ \
             -m "$MARKER" \
             --browser=${{ matrix.browser }} \
-            --headed=false \
             --screenshot=only-on-failure \
             --video=retain-on-failure \
             --tracing=retain-on-failure \
