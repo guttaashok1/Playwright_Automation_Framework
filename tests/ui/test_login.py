@@ -1,6 +1,10 @@
 """
 UI Tests: Authentication / Login
 ADO Test Plan linkage via @pytest.mark.ado marker and ado_test_case_id fixture.
+
+NOTE: This is a generic template file targeting a /login + /dashboard app.
+      It does NOT apply to practicesoftwaretesting.com.
+      Skipped globally — use tests/ui/test_practice_auth.py instead.
 """
 import pytest
 from playwright.sync_api import Page
@@ -8,6 +12,8 @@ from playwright.sync_api import Page
 from pages.login_page import LoginPage
 from pages.dashboard_page import DashboardPage
 from configs.config import config
+
+pytestmark = pytest.mark.skip(reason="Template test — targets generic /login app, not practicesoftwaretesting.com")
 
 
 @pytest.mark.ui

@@ -1,11 +1,16 @@
 """
 UI Tests: Dashboard
 Demonstrates use of authenticated_page fixture and screenshot on failure.
+
+NOTE: Template file for a generic dashboard app.
+      Skipped globally — not applicable to practicesoftwaretesting.com.
 """
 import pytest
 from playwright.sync_api import Page
 
 from pages.dashboard_page import DashboardPage
+
+pytestmark = pytest.mark.skip(reason="Template test — targets generic /dashboard app, not practicesoftwaretesting.com")
 
 
 @pytest.mark.ui

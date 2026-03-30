@@ -85,7 +85,8 @@ class TestPracticeRegistrationAndLogin:
 
         page.get_by_placeholder("Your email").fill(EMAIL)
         page.get_by_placeholder("Your password").fill(PASSWORD)
-        page.locator("input[type='submit']").click()
+        # get_by_role is highest priority — login button is a role="button"
+        page.get_by_role("button", name="Login").click()
 
         page.wait_for_url("**/account**", timeout=20_000)
         expect(page).to_have_url(re.compile(r"/account"))

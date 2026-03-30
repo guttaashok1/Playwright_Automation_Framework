@@ -80,12 +80,21 @@ def browser_context_args() -> dict:
 
 
 @pytest.fixture(scope="session")
-def browser_type_launch_args() -> dict:
-    """Browser launch options."""
+def browser_type_launch_args(browser_name: str) -> dict:
+    """
+    Browser launch options.
+
+    '--disable-dev-shm-usage' is Chromium-only — WebKit rejects it with
+    'Unknown option' which crashes the entire test session.  Only pass it
+    when both (a) running in CI and (b) the browser is Chromium.
+    """
+    chromium_args = (
+        ["--disable-dev-shm-usage"] if config.is_ci() and browser_name == "chromium" else []
+    )
     return {
         "headless": config.browser.HEADLESS,
         "slow_mo": config.browser.SLOW_MO,
-        "args": ["--disable-dev-shm-usage"] if config.is_ci() else [],
+        "args": chromium_args,
     }
 
 
