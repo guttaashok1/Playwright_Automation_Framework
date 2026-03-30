@@ -14,6 +14,7 @@ from typing import Generator
 import pytest
 from loguru import logger
 from playwright.sync_api import Browser, BrowserContext, Page
+from playwright_stealth import Stealth
 
 try:
     from pytest_html import extras as html_extras
@@ -28,58 +29,32 @@ from utils.confluence_client import ConfluenceClient
 
 
 # ============================================================
-# Anti-bot / stealth init script
-# Injected into every browser context before the first navigation.
-# Removes the signals that Cloudflare Turnstile and other bot-detection
-# services use to identify Playwright's automated Chromium.
+# playwright-stealth — comprehensive anti-bot configuration
+# Patches ~20 browser fingerprinting vectors that Cloudflare and
+# other WAFs use to detect Playwright/headless Chrome automation.
+# Applied at the BrowserContext level so it fires before every navigation.
 # ============================================================
 
-_STEALTH_JS = """
-// 1. Remove navigator.webdriver (the primary automation signal)
-Object.defineProperty(navigator, 'webdriver', {
-    get: () => undefined,
-    configurable: true
-});
-
-// 2. Make plugins look like a real browser (empty list = headless bot signal)
-Object.defineProperty(navigator, 'plugins', {
-    get: () => [
-        { name: 'Chrome PDF Plugin',  filename: 'internal-pdf-viewer',         description: 'Portable Document Format' },
-        { name: 'Chrome PDF Viewer',  filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
-        { name: 'Native Client',      filename: 'internal-nacl-plugin',        description: '' }
-    ]
-});
-
-// 3. Override languages (empty or missing = bot signal)
-Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-
-// 4. Provide window.chrome (absent in headless = bot signal)
-if (!window.chrome) {
-    window.chrome = {
-        app: { isInstalled: false },
-        webstore: { onInstallStageChanged: {}, onDownloadProgress: {} },
-        runtime: {
-            PlatformOs:   { MAC: 'mac', WIN: 'win', ANDROID: 'android', CROS: 'cros', LINUX: 'linux' },
-            PlatformArch: { ARM: 'arm', X86_32: 'x86-32', X86_64: 'x86-64' },
-            RequestUpdateCheckStatus: { THROTTLED: 'throttled', NO_UPDATE: 'no_update', UPDATE_AVAILABLE: 'update_available' },
-            onConnect: null, onMessage: null
-        }
-    };
-}
-
-// 5. Patch Notification permissions query (Turnstile probes this)
-try {
-    const _origQuery = window.navigator.permissions.query.bind(navigator.permissions);
-    window.navigator.permissions.query = (params) =>
-        params.name === 'notifications'
-            ? Promise.resolve({ state: Notification.permission })
-            : _origQuery(params);
-} catch (_) {}
-
-// 6. Spoof hardware concurrency / device memory to look like a real machine
-Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
-try { Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 }); } catch (_) {}
-"""
+_STEALTH = Stealth(
+    navigator_webdriver=True,       # navigator.webdriver → undefined
+    navigator_user_agent=True,      # UA spoof
+    navigator_languages=True,       # ['en-US', 'en']
+    navigator_plugins=True,         # non-empty plugin list
+    navigator_permissions=True,     # Notification permissions patch
+    navigator_platform=True,        # Win32 platform spoof
+    navigator_vendor=True,          # Google Inc. vendor
+    navigator_hardware_concurrency=True,
+    webgl_vendor=True,              # Intel/NVIDIA vendor string spoof
+    chrome_app=True,                # window.chrome.app
+    chrome_csi=True,                # window.chrome.csi
+    chrome_load_times=True,         # window.chrome.loadTimes
+    chrome_runtime=False,           # keep False — can break pages
+    media_codecs=True,              # H264/AAC availability spoof
+    hairline=True,                  # devicePixelRatio hairline fix
+    iframe_content_window=True,     # iframe.contentWindow spoof
+    error_prototype=True,           # stack-trace format spoof
+    sec_ch_ua=True,                 # Sec-CH-UA headers spoof
+)
 
 
 # ============================================================
@@ -187,7 +162,7 @@ def page(browser: Browser, browser_context_args: dict) -> Generator[Page, None, 
     """
     context: BrowserContext = browser.new_context(**browser_context_args)
     context.set_default_timeout(config.browser.DEFAULT_TIMEOUT)
-    context.add_init_script(_STEALTH_JS)  # ← anti-bot patch on every page load
+    _STEALTH.apply_stealth_sync(context)  # ← playwright-stealth: patches ~20 bot signals
     page = context.new_page()
     yield page
     context.close()
@@ -201,7 +176,7 @@ def authenticated_page(browser: Browser, browser_context_args: dict) -> Generato
     """
     context: BrowserContext = browser.new_context(**browser_context_args)
     context.set_default_timeout(config.browser.DEFAULT_TIMEOUT)
-    context.add_init_script(_STEALTH_JS)  # ← anti-bot patch on every page load
+    _STEALTH.apply_stealth_sync(context)  # ← playwright-stealth: patches ~20 bot signals
     page = context.new_page()
 
     # Navigate to login and authenticate

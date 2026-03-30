@@ -67,7 +67,34 @@ class BasePage:
 
     def navigate_to_url(self, url: str) -> None:
         logger.info(f"Navigating to absolute URL: {url}")
-        self.page.goto(url, timeout=config.browser.NAVIGATION_TIMEOUT, wait_until="networkidle")
+        # Use "load" (not "networkidle") so the goto() doesn't time-out on
+        # Cloudflare's "Just a moment…" challenge page, which keeps the
+        # network busy while running its JS bot-check before redirecting.
+        self.page.goto(url, timeout=config.browser.NAVIGATION_TIMEOUT, wait_until="load")
+        self._bypass_cloudflare_challenge()
+
+    def _bypass_cloudflare_challenge(self, timeout_ms: int = 20_000) -> None:
+        """
+        If Cloudflare's automatic JS challenge is active (title = 'Just a moment…'),
+        wait up to *timeout_ms* for it to finish and redirect to the real page.
+        This covers the auto-pass case; interactive Turnstile CAPTCHAs cannot be
+        solved automatically and the test will fail with a clear element-not-found.
+        """
+        try:
+            self.page.wait_for_function(
+                """() => {
+                    const t = (document.title || '').toLowerCase();
+                    return !t.includes('just a moment') && !t.includes('checking your browser') && t !== '';
+                }""",
+                timeout=timeout_ms,
+            )
+        except Exception:
+            # Challenge did not auto-clear — proceed; test assertions will fail
+            # with a meaningful "element not found" message.
+            logger.warning(
+                f"[Cloudflare] Challenge still active after {timeout_ms}ms "
+                f"on {self.page.url!r} (title={self.page.title()!r})"
+            )
 
     def reload(self) -> None:
         self.page.reload(wait_until="networkidle")

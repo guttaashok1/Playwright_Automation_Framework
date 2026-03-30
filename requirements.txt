@@ -30,6 +30,9 @@ tenacity==9.0.0               # Retry logic
 loguru==0.7.3                 # Structured logging
 faker==33.1.0                 # Fake test data generation
 
+# Anti-bot / Stealth (bypasses Cloudflare bot-detection in headless browsers)
+playwright-stealth==2.0.2
+
 # Visual Regression
 Pillow==11.1.0               # Screenshot pixel-diff comparison
 

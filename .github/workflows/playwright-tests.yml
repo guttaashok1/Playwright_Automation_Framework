@@ -124,6 +124,12 @@ jobs:
       - name: Install Playwright browsers
         run: playwright install --with-deps ${{ matrix.browser }}
 
+      - name: Start Xvfb virtual display
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1920x1080x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
       - name: Run UI tests
         run: |
           SUITE="${{ github.event.inputs.test_suite || 'smoke' }}"
@@ -140,6 +146,8 @@ jobs:
             -v
         env:
           BROWSER: ${{ matrix.browser }}
+          DISPLAY: ":99"
+          HEADLESS: "false"
 
       - name: Upload UI test artifacts
         if: always()
