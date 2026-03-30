@@ -1,0 +1,61 @@
+# ── Playwright Test Runner ───────────────────────────────────────────────────
+# Dedicated image for running Playwright UI + API tests in parallel.
+# Based on the official Playwright + Python image (includes all browser binaries).
+#
+# Build:
+#   docker build -f Dockerfile.tests -t playwright-tests .
+#
+# Run (all tests, parallel):
+#   docker run --rm -e BASE_URL=https://practicesoftwaretesting.com playwright-tests
+#
+# Run specific markers:
+#   docker run --rm playwright-tests pytest -m "smoke" -n auto
+# ─────────────────────────────────────────────────────────────────────────────
+
+FROM mcr.microsoft.com/playwright/python:v1.49.0-jammy
+
+# ── Environment defaults (override with -e or .env) ──────────────────────────
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    BASE_URL=https://practicesoftwaretesting.com \
+    API_BASE_URL=https://api.practicesoftwaretesting.com \
+    ENVIRONMENT=test \
+    BROWSER=chromium \
+    HEADLESS=true \
+    SLOW_MO=0 \
+    VIEWPORT_WIDTH=1920 \
+    VIEWPORT_HEIGHT=1080 \
+    TEST_USER_EMAIL=customer@practicesoftwaretesting.com \
+    TEST_USER_PASSWORD=welcome01 \
+    SELF_HEALING_ENABLED=false \
+    VISUAL_REGRESSION_ENABLED=false \
+    CI=true
+
+WORKDIR /app
+
+# ── Install Python dependencies (cached layer) ────────────────────────────────
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ── Install only Chromium (fastest build) ────────────────────────────────────
+RUN playwright install chromium --with-deps
+
+# ── Copy source ───────────────────────────────────────────────────────────────
+COPY . .
+
+# ── Create output directories ─────────────────────────────────────────────────
+RUN mkdir -p reports/artifacts reports/allure-results test_data/visual_baselines
+
+# ── Default: run all tests in parallel, generate HTML report ─────────────────
+# Workers (-n) are configured via docker-compose or CMD override.
+# The CMD can be overridden per service in docker-compose.tests.yml.
+CMD ["pytest", \
+     "tests/", \
+     "-n", "auto", \
+     "--dist=loadfile", \
+     "-v", \
+     "--tb=short", \
+     "--html=reports/report.html", \
+     "--self-contained-html", \
+     "--screenshot=only-on-failure", \
+     "--video=retain-on-failure"]

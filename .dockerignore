@@ -1,0 +1,37 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Secrets & local config
+.env
+.env.*
+!.env.example
+terraform.tfvars
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Data / runtime
+data/
+jobs.db
+*.db
+
+# Dev tools
+.git/
+.pytest_cache/
+reports/
+screenshots/
+allure-results/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

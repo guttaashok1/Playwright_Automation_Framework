@@ -1,0 +1,195 @@
+# ── Parallel Playwright Test Execution via Docker Compose ────────────────────
+#
+# Architecture:
+#   ┌──────────────────────────────────────────────────────────┐
+#   │  docker-compose.tests.yml                                │
+#   │                                                          │
+#   │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+#   │  │  ui-smoke    │  │  ui-regress  │  │  api-tests   │   │
+#   │  │  (chromium)  │  │  (chromium)  │  │  (no browser)│   │
+#   │  │  -m smoke    │  │  -m regression│  │  -m api      │   │
+#   │  └──────────────┘  └──────────────┘  └──────────────┘   │
+#   │                                                          │
+#   │  ┌──────────────┐  ┌──────────────────────────────────┐  │
+#   │  │  report-     │  │  full-parallel (all tests, -n 4) │  │
+#   │  │  server      │  │  (optional, for full runs)       │  │
+#   │  └──────────────┘  └──────────────────────────────────┘  │
+#   └──────────────────────────────────────────────────────────┘
+#
+# Usage:
+#   # Run smoke tests only:
+#   docker-compose -f docker-compose.tests.yml up ui-smoke api-tests
+#
+#   # Run all test groups in parallel:
+#   docker-compose -f docker-compose.tests.yml up
+#
+#   # Full suite (single container, auto-parallel workers):
+#   docker-compose -f docker-compose.tests.yml run full-parallel
+#
+#   # View HTML report:
+#   docker-compose -f docker-compose.tests.yml up report-server
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+# ── Shared base configuration ──────────────────────────────────────────────────
+x-test-base: &test-base
+  build:
+    context: .
+    dockerfile: Dockerfile.tests
+  env_file:
+    - .env.test              # create from .env.example for test environment
+  environment:
+    BASE_URL: ${BASE_URL:-https://practicesoftwaretesting.com}
+    API_BASE_URL: ${API_BASE_URL:-https://api.practicesoftwaretesting.com}
+    ENVIRONMENT: test
+    HEADLESS: "true"
+    CI: "true"
+    SELF_HEALING_ENABLED: "false"
+    VISUAL_REGRESSION_ENABLED: "false"
+    TEST_USER_EMAIL: ${TEST_USER_EMAIL:-customer@practicesoftwaretesting.com}
+    TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-welcome01}
+  volumes:
+    - test-reports:/app/reports      # shared volume so all containers write reports here
+  restart: "no"
+
+
+services:
+  # ── UI Smoke Tests — fast, critical path ─────────────────────────────────────
+  ui-smoke:
+    <<: *test-base
+    container_name: pw_ui_smoke
+    command: >
+      pytest tests/ui/
+        -m "smoke"
+        -n 2
+        --dist=loadfile
+        -v --tb=short
+        --html=reports/ui_smoke_report.html
+        --self-contained-html
+        --screenshot=only-on-failure
+        --video=retain-on-failure
+        --output=reports/artifacts/ui-smoke
+    profiles: ["smoke", "all"]
+
+  # ── UI Regression Tests ───────────────────────────────────────────────────────
+  ui-regression:
+    <<: *test-base
+    container_name: pw_ui_regression
+    command: >
+      pytest tests/ui/
+        -m "regression"
+        -n 3
+        --dist=loadfile
+        -v --tb=short
+        --html=reports/ui_regression_report.html
+        --self-contained-html
+        --screenshot=only-on-failure
+        --video=retain-on-failure
+        --output=reports/artifacts/ui-regression
+    profiles: ["regression", "all"]
+
+  # ── API Tests — no browser needed, fastest ────────────────────────────────────
+  api-tests:
+    <<: *test-base
+    container_name: pw_api_tests
+    command: >
+      pytest tests/api/
+        -m "api"
+        -n 4
+        --dist=loadscope
+        -v --tb=short
+        --html=reports/api_report.html
+        --self-contained-html
+    profiles: ["api", "smoke", "all"]
+
+  # ── UI Practice Registration (existing test) ─────────────────────────────────
+  ui-registration:
+    <<: *test-base
+    container_name: pw_ui_registration
+    command: >
+      pytest tests/ui/test_practice_registration.py
+        -n 1
+        -v --tb=short
+        --html=reports/registration_report.html
+        --self-contained-html
+        --screenshot=only-on-failure
+    profiles: ["smoke", "all"]
+
+  # ── Full Parallel Suite — all tests, max workers ──────────────────────────────
+  # Use this for a complete run (e.g. nightly CI).
+  full-parallel:
+    <<: *test-base
+    container_name: pw_full_parallel
+    command: >
+      pytest tests/
+        -n 4
+        --dist=loadfile
+        -v --tb=short
+        --html=reports/full_report.html
+        --self-contained-html
+        --screenshot=only-on-failure
+        --video=retain-on-failure
+        --output=reports/artifacts/full
+        --reruns=1
+        --reruns-delay=2
+    profiles: ["full"]
+
+  # ── Cross-browser: Firefox ────────────────────────────────────────────────────
+  ui-firefox:
+    <<: *test-base
+    container_name: pw_ui_firefox
+    environment:
+      BASE_URL: ${BASE_URL:-https://practicesoftwaretesting.com}
+      API_BASE_URL: ${API_BASE_URL:-https://api.practicesoftwaretesting.com}
+      ENVIRONMENT: test
+      HEADLESS: "true"
+      CI: "true"
+    command: >
+      pytest tests/ui/
+        -m "smoke"
+        --browser=firefox
+        -n 2
+        --dist=loadfile
+        -v --tb=short
+        --html=reports/firefox_smoke_report.html
+        --self-contained-html
+        --screenshot=only-on-failure
+        --output=reports/artifacts/firefox
+    profiles: ["cross-browser"]
+
+  # ── Cross-browser: WebKit (Safari) ───────────────────────────────────────────
+  ui-webkit:
+    <<: *test-base
+    container_name: pw_ui_webkit
+    command: >
+      pytest tests/ui/
+        -m "smoke"
+        --browser=webkit
+        -n 2
+        --dist=loadfile
+        -v --tb=short
+        --html=reports/webkit_smoke_report.html
+        --self-contained-html
+        --screenshot=only-on-failure
+        --output=reports/artifacts/webkit
+    profiles: ["cross-browser"]
+
+  # ── Allure Report Server (view test reports in browser) ───────────────────────
+  report-server:
+    image: nginx:alpine
+    container_name: pw_report_server
+    ports:
+      - "8080:80"
+    volumes:
+      - test-reports:/usr/share/nginx/html:ro
+    depends_on:
+      - ui-smoke
+    restart: unless-stopped
+    profiles: ["reports"]
+
+
+volumes:
+  test-reports:
+    driver: local

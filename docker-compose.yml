@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: jobbot
+      POSTGRES_USER: jobbot
+      POSTGRES_PASSWORD: jobbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobbot -d jobbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  jobbot:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data          # persists sessions, resumes, screenshots
+    env_file:
+      - .env
+    environment:
+      JOB_BOT_HEADLESS: "true"
+      DATABASE_URL: "postgresql://jobbot:jobbot@db:5432/jobbot"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

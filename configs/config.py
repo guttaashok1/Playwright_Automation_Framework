@@ -13,9 +13,9 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 class AppConfig:
     """Application under test configuration."""
 
-    BASE_URL: str = os.getenv("BASE_URL", "https://example.com")
-    API_BASE_URL: str = os.getenv("API_BASE_URL", "https://api.example.com")
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "staging")
+    BASE_URL: str = os.getenv("BASE_URL", "https://practicesoftwaretesting.com")
+    API_BASE_URL: str = os.getenv("API_BASE_URL", "https://api.practicesoftwaretesting.com")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "test")
 
 
 class BrowserConfig:
@@ -36,8 +36,10 @@ class BrowserConfig:
 class TestCredentials:
     """Test user credentials."""
 
-    EMAIL: str = os.getenv("TEST_USER_EMAIL", "")
-    PASSWORD: str = os.getenv("TEST_USER_PASSWORD", "")
+    EMAIL: str = os.getenv("TEST_USER_EMAIL", "customer@practicesoftwaretesting.com")
+    PASSWORD: str = os.getenv("TEST_USER_PASSWORD", "welcome01")
+    ADMIN_EMAIL: str = os.getenv("TEST_ADMIN_EMAIL", "admin@practicesoftwaretesting.com")
+    ADMIN_PASSWORD: str = os.getenv("TEST_ADMIN_PASSWORD", "AQw3j6wBY")
 
 
 class ADOConfig:
