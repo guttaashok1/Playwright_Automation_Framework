@@ -28,6 +28,61 @@ from utils.confluence_client import ConfluenceClient
 
 
 # ============================================================
+# Anti-bot / stealth init script
+# Injected into every browser context before the first navigation.
+# Removes the signals that Cloudflare Turnstile and other bot-detection
+# services use to identify Playwright's automated Chromium.
+# ============================================================
+
+_STEALTH_JS = """
+// 1. Remove navigator.webdriver (the primary automation signal)
+Object.defineProperty(navigator, 'webdriver', {
+    get: () => undefined,
+    configurable: true
+});
+
+// 2. Make plugins look like a real browser (empty list = headless bot signal)
+Object.defineProperty(navigator, 'plugins', {
+    get: () => [
+        { name: 'Chrome PDF Plugin',  filename: 'internal-pdf-viewer',         description: 'Portable Document Format' },
+        { name: 'Chrome PDF Viewer',  filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+        { name: 'Native Client',      filename: 'internal-nacl-plugin',        description: '' }
+    ]
+});
+
+// 3. Override languages (empty or missing = bot signal)
+Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+
+// 4. Provide window.chrome (absent in headless = bot signal)
+if (!window.chrome) {
+    window.chrome = {
+        app: { isInstalled: false },
+        webstore: { onInstallStageChanged: {}, onDownloadProgress: {} },
+        runtime: {
+            PlatformOs:   { MAC: 'mac', WIN: 'win', ANDROID: 'android', CROS: 'cros', LINUX: 'linux' },
+            PlatformArch: { ARM: 'arm', X86_32: 'x86-32', X86_64: 'x86-64' },
+            RequestUpdateCheckStatus: { THROTTLED: 'throttled', NO_UPDATE: 'no_update', UPDATE_AVAILABLE: 'update_available' },
+            onConnect: null, onMessage: null
+        }
+    };
+}
+
+// 5. Patch Notification permissions query (Turnstile probes this)
+try {
+    const _origQuery = window.navigator.permissions.query.bind(navigator.permissions);
+    window.navigator.permissions.query = (params) =>
+        params.name === 'notifications'
+            ? Promise.resolve({ state: Notification.permission })
+            : _origQuery(params);
+} catch (_) {}
+
+// 6. Spoof hardware concurrency / device memory to look like a real machine
+Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+try { Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 }); } catch (_) {}
+"""
+
+
+# ============================================================
 # Playwright test-id attribute configuration
 # ============================================================
 
@@ -66,17 +121,33 @@ def update_baselines(request) -> bool:
 # ============================================================
 
 @pytest.fixture(scope="session")
-def browser_context_args() -> dict:
-    """Default browser context options (viewport, locale, etc.)."""
-    return {
+def browser_context_args(browser_name: str) -> dict:
+    """
+    Default browser context options (viewport, locale, user-agent, etc.).
+
+    A realistic Chrome user-agent is set for Chromium so that Cloudflare
+    and other WAFs do not immediately flag the request as headless-bot traffic.
+    """
+    # Match Playwright 1.49 bundled Chromium (version 131)
+    chrome_ua = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/131.0.0.0 Safari/537.36"
+    )
+    ctx: dict = {
         "viewport": {
             "width": config.browser.VIEWPORT_WIDTH,
             "height": config.browser.VIEWPORT_HEIGHT,
         },
         "locale": "en-US",
         "timezone_id": "America/New_York",
-        "record_video_dir": str(config.reporting.ARTIFACTS_DIR / "videos") if not config.is_ci() else None,
+        "record_video_dir": (
+            str(config.reporting.ARTIFACTS_DIR / "videos") if not config.is_ci() else None
+        ),
     }
+    if browser_name == "chromium":
+        ctx["user_agent"] = chrome_ua
+    return ctx
 
 
 @pytest.fixture(scope="session")
@@ -84,13 +155,20 @@ def browser_type_launch_args(browser_name: str) -> dict:
     """
     Browser launch options.
 
-    '--disable-dev-shm-usage' is Chromium-only — WebKit rejects it with
-    'Unknown option' which crashes the entire test session.  Only pass it
-    when both (a) running in CI and (b) the browser is Chromium.
+    Chromium-specific flags:
+    - '--disable-blink-features=AutomationControlled'  removes the JS property
+      that tells pages "this is a WebDriver-controlled browser".
+    - '--disable-dev-shm-usage' prevents shared-memory exhaustion in CI.
+
+    WebKit and Firefox do not accept Chromium flags — guard every flag.
     """
-    chromium_args = (
-        ["--disable-dev-shm-usage"] if config.is_ci() and browser_name == "chromium" else []
-    )
+    chromium_args: list[str] = []
+    if browser_name == "chromium":
+        # Removes navigator.webdriver = true at the Chrome level
+        chromium_args.append("--disable-blink-features=AutomationControlled")
+        if config.is_ci():
+            chromium_args.append("--disable-dev-shm-usage")
+
     return {
         "headless": config.browser.HEADLESS,
         "slow_mo": config.browser.SLOW_MO,
@@ -100,9 +178,16 @@ def browser_type_launch_args(browser_name: str) -> dict:
 
 @pytest.fixture(scope="function")
 def page(browser: Browser, browser_context_args: dict) -> Generator[Page, None, None]:
-    """Fresh browser page (unauthenticated) per test function."""
+    """
+    Fresh browser page (unauthenticated) per test function.
+
+    The stealth init-script is injected at the *context* level so that it
+    executes before every navigation in this context, preventing Cloudflare
+    Turnstile and similar bot-detection from blocking the tests.
+    """
     context: BrowserContext = browser.new_context(**browser_context_args)
     context.set_default_timeout(config.browser.DEFAULT_TIMEOUT)
+    context.add_init_script(_STEALTH_JS)  # ← anti-bot patch on every page load
     page = context.new_page()
     yield page
     context.close()
@@ -116,6 +201,7 @@ def authenticated_page(browser: Browser, browser_context_args: dict) -> Generato
     """
     context: BrowserContext = browser.new_context(**browser_context_args)
     context.set_default_timeout(config.browser.DEFAULT_TIMEOUT)
+    context.add_init_script(_STEALTH_JS)  # ← anti-bot patch on every page load
     page = context.new_page()
 
     # Navigate to login and authenticate
