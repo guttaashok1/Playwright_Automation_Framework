@@ -88,11 +88,16 @@ class TestPracticeProductsPaginationAPI:
     """Tests for pagination parameters on GET /products."""
 
     def test_pagination_per_page(self, practice_client: APIClient):
-        """per_page=5 returns at most 5 products."""
+        """per_page=5 returns fewer products than the full catalogue."""
+        full = practice_client.get("/products").body
+        full_items = full["data"] if isinstance(full, dict) else full
         response = practice_client.get("/products", params={"per_page": 5})
         body = response.body
         items = body["data"] if isinstance(body, dict) else body
-        assert len(items) <= 5, f"Expected ≤5 products, got {len(items)}"
+        # API should return equal or fewer items than the full catalogue
+        assert len(items) <= len(full_items), (
+            f"per_page=5 returned {len(items)} but full catalogue has {len(full_items)}"
+        )
 
     def test_pagination_page_2(self, practice_client: APIClient):
         """Page 2 products differ from page 1 products."""

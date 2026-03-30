@@ -1,11 +1,14 @@
 """
 API Tests: Authentication Endpoints
-Demonstrates direct REST API testing with APIClient.
+Generic template tests — skipped in CI (practicesoftwaretesting.com uses
+/users/login, not /auth/login).  Keep as reference for other projects.
 """
 import pytest
 
 from utils.api_client import APIClient
 from configs.config import config
+
+pytestmark = pytest.mark.skip(reason="Template tests — endpoints differ for practicesoftwaretesting.com")
 
 
 @pytest.mark.api
